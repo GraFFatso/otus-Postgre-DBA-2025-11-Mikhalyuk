@@ -131,7 +131,7 @@ statement latencies in milliseconds and failures:
 
 для ВМ уменьшил колво ОЗУ с 8ГБ до 2 ГБ, параметры кластера остались без изменений
 
-содержимое aotuconf
+содержимое 'autoconf'
 ```
 shared_buffers = '2GB'
 max_parallel_workers_per_gather = '16'
@@ -148,7 +148,7 @@ wal_level = 'minimal'
 max_wal_senders = '0'
 synchronous_commit = 'local'
 ```
-создал доп. скрипт для для pgbench, чтобы обеспечить переполнение памяти
+создал доп. скрипт для для pgbench, чтобы обеспечить переполнение памяти выборками данных из существующих таблиц
 ```
  SELECT * FROM pgbench_accounts a JOIN pgbench_tellers t ON a.bid = t.bid ;
 ```
@@ -158,4 +158,5 @@ synchronous_commit = 'local'
 pgbench -c 128  -j 64  -P 10 -T 100  -p 5438 -U postgres -h localhost -d task_001_006 -r  -f /var/lib/pg_ext_10/pgbench_001
 
 ```
+т.к. 'connections' у кластера = 153, то нагрузку создавал в количестве 128 соединений
 
