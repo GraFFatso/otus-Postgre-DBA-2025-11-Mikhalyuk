@@ -99,8 +99,10 @@ done in 0.90 s (drop tables 0.00 s, create tables 0.17 s, client-side generate 0
  pgbench -c 8 -P 6 -T 60   -p 5438 -U postgres -h 127.0.0.1 task_01_006
 ```
 для этого кластера (2 ядра, 8гб ОЗУ, каталог PGDATA на HDD) с различными параметрами получались различные результаты в районе 40 tps \
-установка  synchronous_commit в off увеличила tps до 58 пунктов \
-т.к. отсутствует ожидание записи содержимого WAL  "из памяти на диск"
+менял значения  параметров shared_buffers, effective_cahe_size, effective_io_concurrency, work_mem, maintenance_work_mem \
+установка  synchronous_commit в off увеличила tps до 58 пунктов, \
+т.к. отсутствует ожидание записи содержимого WAL  "из памяти на диск" \
+выключение fsync не привело к значительному изменению показателя tps
 
 Во время проведения теста посмотрел статистики, чем занят ввод/вывод запросом
 ```
