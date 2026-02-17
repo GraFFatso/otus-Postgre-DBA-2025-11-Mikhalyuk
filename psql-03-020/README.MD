@@ -73,18 +73,35 @@ sudo -u postgres psql -p 5439
 
 * создана БД
 ```
- CREATE DATABASE bkp \g
+CREATE DATABASE test_db
 
 ```
-* создание таблицы 
+* перекелючение на БД
+```
+\c test_db
+```
+* создание схемы в БД test_db
+```
+CREATE SCHEMA my_schema\g
 
 ```
- CREATE TABLE student AS SELECT generate_series(1,10) AS id, md5(random()::text)::char(10) AS fio \g
+* создание двух таблиц 
+
+```
+CREATE TABLE my_schema.table1  AS SELECT generate_series(1,100) AS id  \g
+CREATE TABLE my_schema.table2 (id int) \g
  
 ```
-* сохранение дампа таблицы в файл
+* создание каталога для резервных копий
 ```
-COPY student TO '/urs/localstd.sql'
+sudo -u postgres mkdir /var/lib/postgresql/backups
+```
+* сохранение дампа таблицы в файл в формате csv
+```
+COPY my_schema.table1 TO '/var/lib/postgresql/backups/001.table.csv' WITH (FORMAT csv )\g
 
 ```
-не выполнилось, т.к. ошибся в написании пути
+* загрузка данных из файла дампа в table2
+```
+COPY my_schema.table2 FROM  '/var/lib/postgresql/backups/001.table.csv' WITH (FORMAT csv )\g
+```
