@@ -105,3 +105,24 @@ COPY my_schema.table1 TO '/var/lib/postgresql/backups/001.table.csv' WITH (FORMA
 ```
 COPY my_schema.table2 FROM  '/var/lib/postgresql/backups/001.table.csv' WITH (FORMAT csv )\g
 ```
+* бэкап через pg_dump только схемы my_schema
+```
+ sudo -u postgres pg_dump --create -Fc --schema=my_schema   -p 5439 -U postgres -f /var/lib/postgresql/backups/pg_dump.001.dump -d test_db
+```
+
+* создана БД и схема в этой БД
+```
+CREATE DATABASE restored_db \g
+postgres=# \c restored_db
+restored_db=# CREATE SCHEMA my_schema \g
+```
+* в новую БД restored_db восстановить только table2 из дампа.
+```
+sudo -u postgres pg_restore  -Fc --schema=my_schema   -p 5439 -U postgres  /var/lib/postgresql/backups/pg_dump.001.dump -d restored_db --table=table2
+```
+
+проверка существования таблиц в БД и данных
+```
+SELECT * FROM pg_catalog.pg_tables WHERE tablename LIKE '%tab%'\g
+SELECT * FROM my_schema.table2 LIMIT 10\g
+```
