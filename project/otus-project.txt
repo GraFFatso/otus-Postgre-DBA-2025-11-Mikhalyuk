@@ -1,0 +1,244 @@
+stat UPGRADE POSTGRES AND MOVE FROM CENTOS TO UBUNTU
+
+--------------------------------------------------------------------
+Используемое аппаратное обеспечение
+hyper-v
+ryzen 7 5800x
+128gb DDR4
+centos 7 4 core, 32gb ram
+system 15gb
+data  161gb
+---------------------------------------------------------------------
+Исходная ВМ
+
+centos 7.9
+4 cores
+32 ram
+100gb SSD / 
+200gb SSD /var/lib/pgsql/15 200gb SSD
+---------------------------------------------------------------------
+архивных 3 БД общим объемом 6гб, можно отдельный кластер 10гб, 10гб под данные, 10гб под индексы
+продуктивных 4 БД общим объемом 30гб, так же отдельные табличные пространства
+системных 3 БД, остаются в табличном пространстве по-умолчанию, в template добавить необходимых расширений
+тестовых 9 БД общим объемом 70гб 
+---------------------------------------------------------------------
+
+Создание и настройка ВМ, выделение места под диски, подключение дисков
+download ubuntu 22.0.4 live server
+create VM
+8 cores,
+16 RAM
+128gb SSD /
+127gb HDD /distrib, уменьшить до 20гб
+100gb SSD /data/clusters уменьшить до 10гб
+100gb SSD /data/v8_1s_data создать 100гб
+100gb SSD /data/v8_1s_indexes создать 100гб
+100gb SSD /data/wals создать 50гб
+100gb SSD /data/temp_tblspc создать 50гб
+
+
+
+apt update
+apt upgrade
+systemctl reboot now
+
+создан и подключен диск для дистрибов, конфигов, скриптов 127гб на медленном диске
+fdisk /dev/sdb
+m
+n
+p
+w
+mkfs.ext4 /dev/sdd1
+blkid /dev/sdd1 >> /etc/fstab
+mkdir /distrib
+systemctl reboot 
+
+созданы и подключены остальные диски аналогичными командами
+
+--------------------------------------------------------------------------------------------
+
+фрагмент документации на платформу 1с
+https://its.1c.ru/db/v8327doc#bookmark:cs:TI000000331
+5.5.5. Управление табличными пространствами
+5.5.5.1. Возможность изменения положения предопределенных табличных пространств
+Доступно для СУБД:
+
+...
+
+● PostgreSQL.
+
+Предопределенные табличные пространства:
+● PostgreSQL:
+
+● для индексов ‑ V81C_INDEX;
+
+● для данных ‑ V81C_DATA;
+
+● временное табличное пространство ‑ произвольное наименование, которое задается через конфигурационный файл postgresql.conf.
+temp_tablespaces 
+------------------------------------------
+зависимости
+https://releases.1c.ru/project/AddCompPostgre
+конкретная версия 
+https://releases.1c.ru/version_files?nick=AddCompPostgre&ver=15.16-1.1C
+установщик
+postgresql_15.16_1_ubuntu_22.04_x86_64_package.tar.bz2
+
+-------------------------------------------
+так же последняя версия
+https://releases.1c.ru/version_files?nick=AddCompPostgre&ver=17.8-1.1C
+
+
+-----------------------------------------------
+установка зависимостей
+apt install /distr/postgres/1s/libs15/*.deb
+на этом этапе создались конфиги по-умолчанию
+/etc/postgresql-common/createcluster.conf
+-----------------------------------------------
+установка самого postgresql
+apt install /distr/postgres/1s/15/15.16/*.deb
+
+при установке инициировался кластер
+pg_lscluster
+pg_ctlcluster 15 main stop
+pg_dropcluster 15 main 
+
+-----------------------------------------------
+mkdir /etc/postgresql-common/createcluster.d
+
+echo "start_conf      = 'manual'"               > /etc/postgresql-common/createcluster.d/001_start_maunal.conf
+echo "data_directory  = '/data/clusters/%v/%c'" > /etc/postgresql-common/createcluster.d/002_data_directory.conf
+echo "waldir          = '/data/wals/%v/%c'"     > /etc/postgresql-common/createcluster.d/003_wal_dir.conf
+echo "add_include_dir = '/distrib/configs/'"    > /etc/postgresql-common/createcluster.d/011_include_dir.conf
+echo initdb_options   = ' --data-checksums '    > /etc/postgresql-common/createcluster.d/012_data_checksums.conf
+echo "timezone        = 'Europe/Moscow'"        > /distrib/configs/001_timezone.conf
+
+-----------------------------------------------
+создан кластер, создана копия диска, подключен диск с каталогом кластера
+предварительно удалив содержимое /data/clusteres/15/first
+неоправданно долго...
+-------------------------
+перенес содержимое каталога /mnt/data/pg_wal в /data/wals/15/first
+перенес все папки и файлы из /mnt/data в /data/clusteres/15/first
+файлы 
+вместо этого символической ссылкой подключил 
+------------------------------
+mv /mnt/data /mnt/first
+ln -d -s /mnt/first /data/clusters/15/
+chown -R postgres:postgres /mnt/first
+
+сгенерировал локаль, с которой была инициализована СУБД в CEntos
+locale-gen ru_RU
+locale-gen ru_RU.UTF-8
+locale-gen en_US.UTF-8
+
+
+-------------------------------------
+mv /data/clusters/15/first/pg_hba.conf /etc/postgresql/15/first/
+-------------------------------------
+накидал скриптов, которые будут:
+менять версию postgres collation
+удалять ненужные базы данных из кластера (прод, тест)
+-------------------------------------
+итого кластер "весит" около 13гб с архивными БД
+остановить СУБД, удалить символическую ссыолку
+mv /data/clusters/15/first
+удалить "хвосты" 
+/etc/postgres/
+/data/clusters
+/data/wals
+-----------------------------------------------
+создать кластер
+pg_createcluster 15 archive
+перенести содержимое каталога /mnt/first в /data/clusters/15/arhchive
+из каталога /data/clusters/15/arhchive в /etc/PostgreSQL/15/archive 
+файлы pg_hba.conf и pg_ident.conf
+
+----------------------------------------------
+создание табличных пространств для каждого из кластеров 
+
+mkdir /data/tblspcs/archive/v8data -p
+mkdir /data/tblspcs/archive/v8indx -p
+mkdir /data/tblspcs/archive/v8tmpt -p
+
+mkdir /data/tblspcs/prod/v8data -p
+mkdir /data/tblspcs/prod/v8indx -p
+mkdir /data/tblspcs/prod/v8tmpt -p
+
+
+mkdir /data/tblspcs/test/v8data -p
+mkdir /data/tblspcs/test/v8indx -p
+mkdir /data/tblspcs/test/v8tmpt -p
+
+chown postgres:postgres -R  /data/tblspcs/test
+
+chown postgres:postgres -R  /data/tblspcs/
+
+
+
+----------------------------------------------
+команды создания табличных пространств
+postgres=# CREATE TABLESPACE v81c_index LOCATION '/data/tblspcs/v8indx' \gx
+CREATE TABLESPACE
+postgres=# CREATE TABLESPACE v81c_data LOCATION '/data/tblspcs/v8data' \gx
+CREATE TABLESPACE
+postgres=# ALTER DATABASE acc_3_stat_archive SET TABLESPACE v81c_data \g
+
+команда переносит все индексы БД из одного табличного пространства в другое
+ALTER INDEX ALL IN TABLESPACE v81c_data SET TABLESPACE v81c_index \g
+
+
+--------------------------------------
+остановить кластер
+удалить символическую ссылку, создать каталог, перенести из примонтированного диска данные в папку кластера
+
+-----------------------------------------------
+кластер выделить 200гб,
+скопировать репликацией архивные БД в новый кластер,
+создать табличные пространства
+переместить в новые табличные пространства, 
+протестировать создавая новую инф. базу, разместится ли в новом табличном пространстве
+
+ удалить в исходном БД,
+ копировать тестовые базы, повторить шаги с архивной
+копировать продуктивные базы, повторить шаги с архивной
+
+удалить исходную ВМ, изменить размеры дисков
+
+
+
+-----------------------------
+обновление pg from 15 to 17 с табличными пространствами и 4 базами данных
+
+установка pg 17  зависимостей
+ apt install /distrib/postgres/1s/libs17/*.deb
+перезапуск сервера
+запуск СУБД
+проверка работоспособности 15 archive - работает
+
+
+ и исполняемых файлов СУБД 17 версии
+
+без  остановки кластера 1с
+pg_upgrade 15 archive  /data/clusters/17/archive 
+1. завершился ошибкой, т.к. в предыдущем сервере был установлено и использовалось расширение adminpack
+на странице расширения https://www.postgresql.org/docs/13/adminpack.html нет поддержки 17 СУБД, поэтому придется удалить
+ DROP EXTENSION adminpack CASCADE \g
+2. прерывался с ошибкой, т.к. в предыдущем сервере был установлено и в одной из БД использовалось расширение system_stats версии 2.0.
+https://github.com/EnterpriseDB/system_stats/releases
+на сегодняшний день существует версия 3.2.1
+чтобы установить расширение пришлось установить 
+gcc, пакеты dev для postgres
+libpq-dev_17.8-1.1C_amd64.deb
+
+файл .so скопирован в каталог /usr/lib/PostgreSQL/17/lib
+файлы
+ *system_stats*.sql и system_stats.control скопированы в папку /usr/share/PostgreSQL/17/extension
+
+
+так же, чтобы возможно было успешно обновиться пришлось скомпилировать и установить версию 2.0 для 15 постгреса
+но так же с ошибкой прерывалось обновление, удалил расширение в 15 кластере
+
+_ваш адрес__ port=__ваш порт__ 
+например localhost port=5435
+
