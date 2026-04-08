@@ -1,0 +1,9 @@
+DROP DATABASE  IF EXISTS stat_acc_other		\gx
+DROP DATABASE  IF EXISTS stat_alfa_invent	\gx
+DROP DATABASE  IF EXISTS stat_erp_demo		\gx
+DROP DATABASE  IF EXISTS test			\gx
+DROP DATABASE  IF EXISTS test_stat_acc_3	\gx
+DROP DATABASE  IF EXISTS test_stat_alfa		\gx
+DROP DATABASE  IF EXISTS test_stat_hrm_3	 \gx
+DROP DATABASE  IF EXISTS test_sync_stat_acc_3	\gx
+DROP DATABASE  IF EXISTS test_sync_stat_alfa	\gx

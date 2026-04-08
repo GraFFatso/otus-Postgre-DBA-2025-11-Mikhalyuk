@@ -1,0 +1,4 @@
+DROP DATABASE IF EXISTS  stat_acc_3 \gx
+DROP DATABASE IF EXISTS  stat_acc_zf \gx
+DROP DATABASE IF EXISTS  stat_alfa_5 \gx
+DROP DATABASE IF EXISTS  stat_hrm_3 \gx

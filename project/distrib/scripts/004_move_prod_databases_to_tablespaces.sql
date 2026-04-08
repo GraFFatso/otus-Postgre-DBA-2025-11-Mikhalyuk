@@ -1,0 +1,15 @@
+ALTER DATABASE stat_acc_3 SET TABLESPACE v81c_data \g
+\c stat_acc_3
+ALTER INDEX ALL IN TABLESPACE v81c_data SET TABLESPACE v81c_index \g
+
+ALTER DATABASE stat_acc_zf SET TABLESPACE v81c_data \g
+\c stat_acc_zf
+ALTER INDEX ALL IN TABLESPACE v81c_data SET TABLESPACE v81c_index \g
+
+ALTER DATABASE stat_alfa_5 SET TABLESPACE v81c_data \g
+\c stat_alfa_5
+ALTER INDEX ALL IN TABLESPACE v81c_data SET TABLESPACE v81c_index \g
+
+ALTER DATABASE stat_hrm_3 SET TABLESPACE v81c_data \g
+\c stat_hrm_3
+ALTER INDEX ALL IN TABLESPACE v81c_data SET TABLESPACE v81c_index \g
